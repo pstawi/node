@@ -3,6 +3,7 @@ const connection = require('../config/database');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcryptjs = require('bcryptjs');
+const auth = require('../middleware/authentification');
 
 // Création des routes
 
@@ -18,7 +19,7 @@ router.post('/login', (req, res) => {
             return res.status(401).send('Utilisateur non trouvé ou mot de passe incorrect');
         }
 
-        const { nom } = result[0]; // Extraction du nom de l'utilisateur
+        const user = result[0]; // Extraction du nom de l'utilisateur
         console.log(result);    
 
         // Comparaison du mot de passe fourni avec le mot de passe haché stocké en base de données
@@ -28,11 +29,11 @@ router.post('/login', (req, res) => {
             }
 
             // Génération du token JWT avec une durée de validité de 24h
-            const token = jwt.sign({ email, nom }, process.env.secret_key, { expiresIn: '24h' });
+            const token = jwt.sign({ email }, process.env.secret_key, { expiresIn: '24h' });
 
             // Ajout du token dans l'en-tête de la réponse
             res.setHeader('Authorization', token);
-            res.status(200).json(result[0]); // Renvoi des informations de l'utilisateur
+            res.status(200).json({user,token}); // Renvoi des informations de l'utilisateur
             console.log(token);
         });
     });
@@ -58,7 +59,7 @@ router.post('/create', (req, res) => {
 });
 
 // Route pour récupérer tous les utilisateurs
-router.get('/getAll', (req, res) => {
+router.get('/getAll', auth, (req, res) => {
     const sql = 'SELECT * FROM utilisateurs';
     
     connection.query(sql, (err, result) => {
@@ -71,7 +72,7 @@ router.get('/getAll', (req, res) => {
 });
 
 // Route pour récupérer un utilisateur par son ID
-router.get('/getById/:id', (req, res) => {
+router.get('/getById/:id', auth, (req, res) => {
     const { id } = req.params;
     
     const sql = 'SELECT * FROM utilisateurs WHERE id = ?';
@@ -88,7 +89,7 @@ router.get('/getById/:id', (req, res) => {
 });
 
 // Route pour mettre à jour un utilisateur
-router.put('/update/:id', (req, res) => {
+router.put('/update/:id', auth, (req, res) => {
     const { id } = req.params;
     const { nom, email, mot_de_passe } = req.body;
     
@@ -104,7 +105,7 @@ router.put('/update/:id', (req, res) => {
 });
 
 // Route pour supprimer un utilisateur
-router.delete('/delete/:id', (req, res) => {
+router.delete('/delete/:id', auth, (req, res) => {
     const { id } = req.params;
     
     const sql = 'DELETE FROM utilisateurs WHERE id = ?';
